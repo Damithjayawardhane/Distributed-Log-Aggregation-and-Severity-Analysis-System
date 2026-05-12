@@ -1,0 +1,258 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Distributed Severity Monitoring Console</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+
+        .topbar {
+            padding: 30px 45px;
+            background: linear-gradient(135deg, #111827, #334155);
+            border-bottom: 4px solid #38bdf8;
+        }
+
+            .topbar h1 {
+                margin: 0;
+                font-size: 34px;
+            }
+
+            .topbar p {
+                margin-top: 8px;
+                color: #cbd5e1;
+            }
+
+        .container {
+            padding: 35px 45px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 18px;
+            padding: 26px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+            border: 1px solid #334155;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #f8fafc;
+        }
+
+        label {
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            margin: 8px 0 16px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+        }
+
+        button {
+            background: linear-gradient(135deg, #06b6d4, #2563eb);
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+            button:hover {
+                opacity: 0.9;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th {
+            text-align: left;
+            color: #93c5fd;
+            padding: 12px;
+            border-bottom: 1px solid #475569;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .live {
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .badge {
+            background: #1e40af;
+            color: #bfdbfe;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .flow {
+            background: #0f172a;
+            padding: 14px;
+            border-radius: 12px;
+            color: #bae6fd;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="topbar">
+        <h1>Distributed Severity Monitoring Console</h1>
+        <p>Master → Worker → Verifier → Reducer</p>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+
+            <div class="card">
+                <h2>Run Log Analysis</h2>
+
+                <label>Input Log File</label>
+                <input value="logs.txt - LogHub Dataset" readonly>
+
+                <label>Analysis Type</label>
+                <input value="Severity Count and Verification" readonly>
+
+                <button onclick="runAnalysis()">Run Analysis</button>
+
+                <p id="status"></p>
+
+                <div class="flow">
+                    Log file is read by Master, processed by Worker, verified by Verifier and summarized by Reducer.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Active Cluster Roles</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Endpoint</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>master-node-01</td>
+                            <td>Coordinator/Master</td>
+                            <td class="live">ONLINE</td>
+                            <td>/master/run</td>
+                        </tr>
+                        <tr>
+                            <td>worker-node-01</td>
+                            <td>Mapper/Worker</td>
+                            <td class="live">ONLINE</td>
+                            <td>/worker/analyze</td>
+                        </tr>
+                        <tr>
+                            <td>verifier-node-01</td>
+                            <td>Validator/Verifier</td>
+                            <td class="live">ONLINE</td>
+                            <td>/verifier/check</td>
+                        </tr>
+                        <tr>
+                            <td>reducer-node-01</td>
+                            <td>Aggregator/Reducer</td>
+                            <td class="live">ONLINE</td>
+                            <td>/reducer/merge</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Latest Execution</h2>
+
+                <p><b>Execution ID:</b> <span id="jobId">Not started</span></p>
+                <p><b>Verification:</b> <span id="validation" class="badge">WAITING</span></p>
+                <p><b>System Message:</b> <span id="jobStatus">Waiting for log analysis</span></p>
+            </div>
+
+            <div class="card">
+                <h2>Severity Summary</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Severity</th>
+                            <th>Total Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="countsTable">
+                        <tr><td>INFO</td><td>0</td></tr>
+                        <tr><td>DEBUG</td><td>0</td></tr>
+                        <tr><td>WARNING</td><td>0</td></tr>
+                        <tr><td>ERROR</td><td>0</td></tr>
+                        <tr><td>CRITICAL</td><td>0</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function runAnalysis() {
+            document.getElementById("status").innerHTML = "Running analysis...";
+            document.getElementById("jobStatus").innerHTML = "Processing log records...";
+
+            const response = await fetch("/masterCoordinator/start", {
+                method: "POST"
+            });
+
+            const data = await response.json();
+
+            document.getElementById("status").innerHTML = "Analysis completed successfully";
+            document.getElementById("status").className = "success";
+
+            document.getElementById("jobId").innerHTML = data.chunkId;
+            document.getElementById("validation").innerHTML = data.validation;
+            document.getElementById("jobStatus").innerHTML = data.message;
+
+            let counts = data.finalResult;
+            let html = "";
+
+            for (let key in counts) {
+                html += `<tr><td>${key}</td><td>${counts[key]}</td></tr>`;
+            }
+
+            document.getElementById("countsTable").innerHTML = html;
+        }
+    </script>
+
+</body>
+</html>
