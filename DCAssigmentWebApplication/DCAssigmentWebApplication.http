@@ -1,6 +1,11 @@
 @DCAssigmentWebApplication_HostAddress = http://localhost:5021
 
-GET {{DCAssigmentWebApplication_HostAddress}}/weatherforecast/
+### Run full coordinator pipeline
+POST {{DCAssigmentWebApplication_HostAddress}}/masterCoordinator/start
+Accept: application/json
+
+### Aggregator totals (after pipeline runs)
+GET {{DCAssigmentWebApplication_HostAddress}}/aggregator/result
 Accept: application/json
 
 ###

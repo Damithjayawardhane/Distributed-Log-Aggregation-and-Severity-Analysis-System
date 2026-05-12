@@ -4,9 +4,11 @@ namespace DCAssigmentWebApplication.Services
 {
     public static class AggregatorService
     {
-        private static readonly object _lock = new();
+        private static readonly object LockObj = new();
 
-        private static Dictionary<string, int> globalCounts = new()
+        private static readonly HashSet<string> ProcessedChunkIds = new(StringComparer.Ordinal);
+
+        private static Dictionary<string, int> GlobalCounts = new()
         {
             ["INFO"] = 0,
             ["DEBUG"] = 0,
@@ -17,20 +19,27 @@ namespace DCAssigmentWebApplication.Services
 
         public static Dictionary<string, int> Aggregate(SeverityResult result)
         {
-            lock (_lock)
+            lock (LockObj)
             {
-                foreach (var item in result.Counts)
-                {
-                    globalCounts[item.Key] += item.Value;
-                }
-            }
+                if (!string.IsNullOrEmpty(result.ChunkId) && !ProcessedChunkIds.Add(result.ChunkId))
+                    return Snapshot(GlobalCounts);
 
-            return globalCounts;
+                foreach (var item in result.Counts)
+                    GlobalCounts[item.Key] += item.Value;
+
+                return Snapshot(GlobalCounts);
+            }
         }
 
         public static Dictionary<string, int> GetResult()
         {
-            return globalCounts;
+            lock (LockObj)
+                return Snapshot(GlobalCounts);
+        }
+
+        private static Dictionary<string, int> Snapshot(Dictionary<string, int> source)
+        {
+            return source.ToDictionary(kv => kv.Key, kv => kv.Value);
         }
     }
 }

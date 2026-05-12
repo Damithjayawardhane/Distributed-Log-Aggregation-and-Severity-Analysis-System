@@ -1,258 +1,438 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Distributed Severity Monitoring Console</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SE5090 — Log aggregation &amp; severity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
+        :root {
+            --bg0: #e8f4fc;
+            --bg1: #f5f0ff;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: rgba(148, 163, 184, 0.45);
+            --shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.1);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --accent: #0d9488;
+            --accent2: #2563eb;
+            --info: #0284c7;
+            --debug: #7c3aed;
+            --warn: #d97706;
+            --error: #dc2626;
+            --critical: #be185d;
+            --ok: #059669;
+            --font: "Inter", system-ui, sans-serif;
+            --mono: "JetBrains Mono", ui-monospace, monospace;
+        }
+
+        * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: "Segoe UI", Arial, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
+            min-height: 100vh;
+            font-family: var(--font);
+            color: var(--text);
+            background: linear-gradient(165deg, var(--bg0) 0%, #fff 38%, var(--bg1) 100%);
+            line-height: 1.5;
         }
 
-        .topbar {
-            padding: 30px 45px;
-            background: linear-gradient(135deg, #111827, #334155);
-            border-bottom: 4px solid #38bdf8;
+        .hero {
+            text-align: center;
+            padding: 2rem 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, transparent 100%);
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+        }
+        .hero h1 em {
+            font-style: normal;
+            color: var(--accent2);
+        }
+        .hero-tag {
+            margin: 0.5rem 0 0;
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-weight: 500;
         }
 
-            .topbar h1 {
-                margin: 0;
-                font-size: 34px;
-            }
-
-            .topbar p {
-                margin-top: 8px;
-                color: #cbd5e1;
-            }
-
-        .container {
-            padding: 35px 45px;
-        }
-
-        .grid {
+        .layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.15fr);
+            gap: 1.25rem;
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 1.25rem 1.25rem 2.5rem;
+            align-items: start;
+        }
+        @media (max-width: 820px) {
+            .layout { grid-template-columns: 1fr; }
         }
 
-        .card {
-            background: #1e293b;
-            border-radius: 18px;
-            padding: 26px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
-            border: 1px solid #334155;
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.35rem;
+            box-shadow: var(--shadow);
         }
+        .panel:hover { box-shadow: var(--shadow-lg); transition: box-shadow 0.2s ease; }
 
-        h2 {
-            margin-top: 0;
-            color: #f8fafc;
+        .panel-head {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.85rem;
         }
-
-        label {
-            color: #cbd5e1;
+        .pill {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+            color: #3730a3;
+        }
+        .pill.run {
+            background: linear-gradient(135deg, #ccfbf1, #cffafe);
+            color: #0f766e;
+        }
+        .panel h2 {
+            margin: 0;
+            font-size: 0.95rem;
             font-weight: 600;
         }
 
-        input {
+        .checklist {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .checklist li {
+            position: relative;
+            padding: 0.55rem 0 0.55rem 1.65rem;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        .checklist li:last-child { border-bottom: none; }
+        .checklist li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0.65rem;
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+        }
+        .checklist strong { color: var(--text); font-weight: 600; }
+        .checklist code {
+            font-family: var(--mono);
+            font-size: 0.78em;
+            background: #f1f5f9;
+            padding: 0.1em 0.35em;
+            border-radius: 4px;
+            color: #334155;
+        }
+
+        .stack { display: flex; flex-direction: column; gap: 1rem; }
+
+        .hint {
+            margin: 0 0 0.75rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .hint code { font-family: var(--mono); font-size: 0.9em; background: #f1f5f9; padding: 0.1em 0.35em; border-radius: 4px; }
+
+        .btn-run {
             width: 100%;
-            padding: 13px;
-            margin: 8px 0 16px;
-            border-radius: 10px;
-            border: 1px solid #475569;
-            background: #0f172a;
-            color: white;
-        }
-
-        button {
-            background: linear-gradient(135deg, #06b6d4, #2563eb);
-            color: white;
+            padding: 0.85rem 1rem;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            font-weight: 700;
             border: none;
-            padding: 13px 22px;
-            border-radius: 12px;
-            font-weight: bold;
+            border-radius: var(--radius-sm);
             cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s;
+        }
+        .btn-run:hover:not(:disabled) {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(13, 148, 136, 0.35);
+        }
+        .btn-run:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .btn-run:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, 0.45);
+            outline-offset: 2px;
         }
 
-            button:hover {
-                opacity: 0.9;
-            }
+        #status {
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
+            min-height: 1.25em;
+            font-weight: 500;
+        }
+        #status.ok { color: var(--ok); }
+        #status.err { color: var(--error); }
+        #status.wait { color: var(--warn); }
 
-        table {
+        .kv {
+            display: grid;
+            gap: 0;
+            margin-bottom: 0.75rem;
+        }
+        .kv-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+            font-size: 0.82rem;
+        }
+        .kv-row span:first-child { color: var(--muted); font-weight: 600; }
+        .kv-val { font-weight: 600; text-align: right; }
+        .kv-val.mono {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            word-break: break-all;
+            max-width: 62%;
+            color: #334155;
+        }
+
+        .badge-v {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-v.accept { background: #d1fae5; color: #047857; }
+        .badge-v.reject { background: #fee2e2; color: #b91c1c; }
+        .badge-v.wait { background: #fef3c7; color: #b45309; }
+
+        .counts-wrap { margin-top: 0.25rem; overflow: hidden; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+        table.counts {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 12px;
+            font-size: 0.84rem;
         }
-
-        th {
+        .counts th {
             text-align: left;
-            color: #93c5fd;
-            padding: 12px;
-            border-bottom: 1px solid #475569;
+            padding: 0.5rem 0.75rem;
+            background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
         }
+        .counts td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
+        .counts tr:last-child td { border-bottom: none; }
+        .counts tr:hover td { background: #fafbfc; }
 
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #334155;
-        }
+        .sev-cell { display: flex; align-items: center; gap: 0.45rem; font-weight: 600; }
+        .sev-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; flex-shrink: 0; }
+        .sev-info .sev-dot { background: var(--info); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); }
+        .sev-debug .sev-dot { background: var(--debug); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }
+        .sev-warn .sev-dot { background: var(--warn); box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2); }
+        .sev-error .sev-dot { background: var(--error); box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2); }
+        .sev-critical .sev-dot { background: var(--critical); box-shadow: 0 0 0 3px rgba(190, 24, 93, 0.2); }
+        .counts .num { font-family: var(--mono); font-weight: 600; color: #1e293b; text-align: right; }
 
-        .live {
-            color: #22c55e;
-            font-weight: bold;
+        .routes-panel { max-width: 1040px; margin: 0 auto; padding: 0 1.25rem 2rem; }
+        .routes-panel .panel { box-shadow: var(--shadow); }
+        .routes-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+        .routes-table td { padding: 0.55rem 0.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .routes-table tr:last-child td { border-bottom: none; }
+        .routes-table td:first-child { font-weight: 600; color: var(--text); width: 38%; }
+        .routes-table code {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            background: linear-gradient(180deg, #f1f5f9, #e8eef4);
+            padding: 0.25rem 0.45rem;
+            border-radius: 6px;
+            color: #0f172a;
         }
+        .routes-table tr:hover td { background: #fafbfc; }
 
-        .badge {
-            background: #1e40af;
-            color: #bfdbfe;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-
-        .success {
-            color: #22c55e;
-            font-weight: bold;
-            margin-top: 15px;
-        }
-
-        .flow {
-            background: #0f172a;
-            padding: 14px;
-            border-radius: 12px;
-            color: #bae6fd;
-            margin-top: 15px;
-        }
     </style>
 </head>
-
 <body>
+    <header class="hero">
+        <h1><em>Distributed log aggregation</em> &amp; Severity analysis</h1>
+        <p class="hero-tag">SE5090 · Distributed Computing</p>
+    </header>
 
-    <div class="topbar">
-        <h1>Distributed Severity Monitoring Console</h1>
-        <p>Master → Worker → Verifier → Reducer</p>
-    </div>
+    <div class="layout">
+        <aside class="panel">
+            <div class="panel-head">
+                <span class="pill">Overview</span>
+                <h2>Cluster pipeline</h2>
+            </div>
+            <ul class="checklist">
+                <li><strong>Topology:</strong> one coordinator, multiple mapper workers, multiple validators (quorum), one aggregator.</li>
+                <li><strong>Severity levels:</strong> INFO, DEBUG, WARNING, ERROR, CRITICAL.</li>
+                <li><strong>Mapper:</strong> parses log lines; per-severity totals and distinct message lines.</li>
+                <li><strong>Validator:</strong> independent recount on the raw chunk; vote uses <code>floor(N/2)+1</code> ACCEPT of <em>N</em> validators.</li>
+                <li><strong>Aggregator:</strong> merges accepted mapper totals; skips duplicate <code>chunkId</code> submissions.</li>
+                <li><strong>Coordinator:</strong> splits the input file into line-range shards for mappers.</li>
+            </ul>
+        </aside>
 
-    <div class="container">
-        <div class="grid">
-
-            <div class="card">
-                <h2>Run Log Analysis</h2>
-
-                <label>Input Log File</label>
-                <input value="logs.txt - LogHub Dataset" readonly>
-
-                <label>Analysis Type</label>
-                <input value="Severity Count and Verification" readonly>
-
-                <button onclick="runAnalysis()">Run Analysis</button>
-
-                <p id="status"></p>
-
-                <div class="flow">
-                    Log file is read by Master, processed by Worker, verified by Verifier and summarized by Reducer.
+        <div class="stack">
+            <section class="panel">
+                <div class="panel-head">
+                    <span class="pill run">Run</span>
+                    <h2><code style="font-family:var(--mono);font-size:0.85em;">POST /masterCoordinator/start</code></h2>
                 </div>
-            </div>
+                <p class="hint">Input file: <code>logs.txt</code> next to the project (override with <code>LogProcessing:LogFilePath</code> in <code>appsettings.json</code>).</p>
+                <button type="button" class="btn-run" id="runBtn" onclick="runAnalysis()">Run pipeline</button>
+                <p id="status" role="status" aria-live="polite"></p>
+            </section>
 
-            <div class="card">
-                <h2>Active Cluster Roles</h2>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Node</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Endpoint</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>master-node-01</td>
-                            <td>Coordinator/Master</td>
-                            <td class="live">ONLINE</td>
-                            <td>/master/run</td>
-                        </tr>
-                        <tr>
-                            <td>worker-node-01</td>
-                            <td>Mapper/Worker</td>
-                            <td class="live">ONLINE</td>
-                            <td>/worker/analyze</td>
-                        </tr>
-                        <tr>
-                            <td>verifier-node-01</td>
-                            <td>Validator/Verifier</td>
-                            <td class="live">ONLINE</td>
-                            <td>/verifier/check</td>
-                        </tr>
-                        <tr>
-                            <td>reducer-node-01</td>
-                            <td>Aggregator/Reducer</td>
-                            <td class="live">ONLINE</td>
-                            <td>/reducer/merge</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <h2>Latest Execution</h2>
-
-                <p><b>Execution ID:</b> <span id="jobId">Not started</span></p>
-                <p><b>Verification:</b> <span id="validation" class="badge">WAITING</span></p>
-                <p><b>System Message:</b> <span id="jobStatus">Waiting for log analysis</span></p>
-            </div>
-
-            <div class="card">
-                <h2>Severity Summary</h2>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Severity</th>
-                            <th>Total Count</th>
-                        </tr>
-                    </thead>
-                    <tbody id="countsTable">
-                        <tr><td>INFO</td><td>0</td></tr>
-                        <tr><td>DEBUG</td><td>0</td></tr>
-                        <tr><td>WARNING</td><td>0</td></tr>
-                        <tr><td>ERROR</td><td>0</td></tr>
-                        <tr><td>CRITICAL</td><td>0</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
+            <section class="panel">
+                <div class="panel-head">
+                    <span class="pill">Output</span>
+                    <h2>Result</h2>
+                </div>
+                <div class="kv">
+                    <div class="kv-row"><span>Validation</span><span class="kv-val" id="validationWrap"><span id="validation" class="badge-v wait">—</span></span></div>
+                    <div class="kv-row"><span>Mapper shards</span><span class="kv-val" id="shardCount">—</span></div>
+                    <div class="kv-row"><span>Quorum</span><span class="kv-val" id="quorumInfo" style="font-size:0.78rem;">—</span></div>
+                    <div class="kv-row"><span>Run id</span><span class="kv-val mono" id="jobId">—</span></div>
+                </div>
+                <div class="counts-wrap">
+                    <table class="counts">
+                        <thead><tr><th>Severity</th><th>Count</th></tr></thead>
+                        <tbody id="countsTable"></tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     </div>
 
+    <div class="routes-panel">
+        <section class="panel">
+            <div class="panel-head">
+                <span class="pill">API</span>
+                <h2>Endpoints by role</h2>
+            </div>
+            <table class="routes-table">
+                <tbody>
+                    <tr><td>Coordinator</td><td><code>/masterCoordinator/start</code></td></tr>
+                    <tr><td>Mapper</td><td><code>/mapper/process</code></td></tr>
+                    <tr><td>Validator</td><td><code>/validator/validate</code></td></tr>
+                    <tr><td>Aggregator</td><td><code>/aggregator/aggregate</code></td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
     <script>
-        async function runAnalysis() {
-            document.getElementById("status").innerHTML = "Running analysis...";
-            document.getElementById("jobStatus").innerHTML = "Processing log records...";
+        const ORDER = ["INFO", "DEBUG", "WARNING", "ERROR", "CRITICAL"];
 
-            const response = await fetch("/masterCoordinator/start", {
-                method: "POST"
-            });
-
-            const data = await response.json();
-
-            document.getElementById("status").innerHTML = "Analysis completed successfully";
-            document.getElementById("status").className = "success";
-
-            document.getElementById("jobId").innerHTML = data.chunkId;
-            document.getElementById("validation").innerHTML = data.validation;
-            document.getElementById("jobStatus").innerHTML = data.message;
-
-            let counts = data.finalResult;
-            let html = "";
-
-            for (let key in counts) {
-                html += `<tr><td>${key}</td><td>${counts[key]}</td></tr>`;
-            }
-
-            document.getElementById("countsTable").innerHTML = html;
+        function sevClass(name) {
+            const n = (name || "").toUpperCase();
+            if (n === "INFO") return "sev-info";
+            if (n === "DEBUG") return "sev-debug";
+            if (n === "WARNING" || n === "WARN") return "sev-warn";
+            if (n === "ERROR") return "sev-error";
+            if (n === "CRITICAL" || n === "FATAL") return "sev-critical";
+            return "";
         }
-    </script>
 
+        function setValidationBadge(vote) {
+            const el = document.getElementById("validation");
+            const v = (vote || "").toString().toUpperCase();
+            el.textContent = vote || "—";
+            el.className = "badge-v " + (v === "ACCEPT" ? "accept" : v === "REJECT" ? "reject" : "wait");
+        }
+
+        function renderCounts(counts) {
+            const tbody = document.getElementById("countsTable");
+            if (!counts || typeof counts !== "object") {
+                tbody.innerHTML = "";
+                return;
+            }
+            const keys = Object.keys(counts).sort((a, b) => {
+                const ia = ORDER.indexOf(a.toUpperCase());
+                const ib = ORDER.indexOf(b.toUpperCase());
+                if (ia === -1 && ib === -1) return a.localeCompare(b);
+                if (ia === -1) return 1;
+                if (ib === -1) return -1;
+                return ia - ib;
+            });
+            tbody.innerHTML = keys.map(function (k) {
+                var cls = sevClass(k);
+                return "<tr><td class=\"" + cls + "\"><span class=\"sev-cell\"><span class=\"sev-dot\"></span>" + escape(k) + "</span></td><td class=\"num\">" + escape(String(counts[k])) + "</td></tr>";
+            }).join("");
+        }
+
+        function escape(s) {
+            var d = document.createElement("div");
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        async function runAnalysis() {
+            var btn = document.getElementById("runBtn");
+            var status = document.getElementById("status");
+            btn.disabled = true;
+            status.className = "wait";
+            status.textContent = "Running pipeline…";
+            try {
+                var r = await fetch("/masterCoordinator/start", { method: "POST", headers: { Accept: "application/json" } });
+                var text = await r.text();
+                var data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { message: text }; }
+                if (!r.ok) {
+                    var msg = (data && (data.message || data.title)) || text || r.statusText;
+                    throw new Error(typeof msg === "string" ? msg : String(r.status));
+                }
+                status.className = "ok";
+                status.textContent = data.message || "Completed.";
+                setValidationBadge(data.validation);
+                document.getElementById("shardCount").textContent = data.mapperShards != null ? String(data.mapperShards) : "—";
+                document.getElementById("quorumInfo").textContent =
+                    data.validatorNodes != null
+                        ? data.acceptVotes + "/" + data.validatorNodes + " ACCEPT (need " + data.requiredQuorum + ")"
+                        : "—";
+                document.getElementById("jobId").textContent = data.runId || "—";
+                renderCounts(data.finalResult);
+            } catch (e) {
+                status.className = "err";
+                status.textContent = e.message || "Failed.";
+                setValidationBadge("—");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        (function init() {
+            var tbody = document.getElementById("countsTable");
+            tbody.innerHTML = ORDER.map(function (s) {
+                return "<tr><td class=\"" + sevClass(s) + "\"><span class=\"sev-cell\"><span class=\"sev-dot\"></span>" + s + "</span></td><td class=\"num\">0</td></tr>";
+            }).join("");
+        })();
+    </script>
 </body>
 </html>
